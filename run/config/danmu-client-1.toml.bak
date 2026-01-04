@@ -1,0 +1,19 @@
+["Danmu Settings"]
+	#Web server port (default: 8080)
+	# Default: 8080
+	# Range: 1024 ~ 65535
+	webPort = 8080
+	#Enable danmu display
+	enableDanmu = true
+	#Danmu display time in milliseconds (default: 8000)
+	# Default: 8000
+	# Range: 1000 ~ 30000
+	displayTime = 8000
+	#Danmu movement speed (default: 1.0)
+	# Default: 1.0
+	# Range: 0.1 ~ 5.0
+	danmuSpeed = 1.0
+	#Maximum number of danmus displayed at once (default: 20)
+	# Default: 20
+	# Range: 1 ~ 100
+	maxDanmus = 20
