@@ -1,5 +1,27 @@
 {
-  "itemGroup.danmu": "Example Mod Tab",
-  "block.danmu.example_block": "Example Block",
-  "item.danmu.example_item": "Example Item"
+  "key.danmumod.openbrowser": "Open Danmu Browser",
+  "category.danmumod.general": "Danmu Mod",
+  "text.danmumod.webui": "Danmu Web Interface",
+
+  "config.danmumod.title": "Danmu Mod Settings",
+  "config.danmumod.category.general": "General Settings",
+  "config.danmumod.category.visual": "Visual Settings",
+
+  "config.danmumod.port": "Web Server Port",
+  "config.danmumod.port.tooltip": "Port for the web server (default: 8080)",
+
+  "config.danmumod.enabled": "Enable Danmu",
+  "config.danmumod.enabled.tooltip": "Enable/disable danmu display",
+
+  "config.danmumod.displayTime": "Display Time",
+  "config.danmumod.displayTime.tooltip": "How long danmu stays on screen (ms)",
+
+  "config.danmumod.maxDanmus": "Max Danmus",
+  "config.danmumod.maxDanmus.tooltip": "Maximum number of danmus displayed at once",
+
+  "config.danmumod.speed": "Danmu Speed",
+  "config.danmumod.speed.tooltip": "Speed of danmu movement",
+
+  "config.danmumod.showSender": "Show Sender",
+  "config.danmumod.showSender.tooltip": "Show sender name before message"
 }

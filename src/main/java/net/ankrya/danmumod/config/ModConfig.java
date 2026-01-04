@@ -1,41 +1,67 @@
 package net.ankrya.danmumod.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import net.ankrya.danmumod.DanmuMod;
+
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class ModConfig {
-    public static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
-    public static final ModConfigSpec SPEC;
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static ConfigData configData = new ConfigData();
 
-    public static final ModConfigSpec.ConfigValue<Integer> WEB_PORT;
-    public static final ModConfigSpec.ConfigValue<Boolean> ENABLE_DANMU;
-    public static final ModConfigSpec.ConfigValue<Integer> DISPLAY_TIME;
-    public static final ModConfigSpec.ConfigValue<Double> DANMU_SPEED;
-    public static final ModConfigSpec.ConfigValue<Integer> MAX_DANMUS;
+    public static class ConfigData {
+        public int webPort = 8080;
+        public boolean enableDanmu = true;
+        public int displayTime = 5000;
+        public double danmuSpeed = 0.7;
+        public int maxDanmus = 20;
+    }
 
-    static {
-        BUILDER.push("Danmu Settings");
+    public static void loadConfig() {
+        try {
+            Path configFile = DanmuMod.CONFIG_PATH.resolve("config.json");
 
-        WEB_PORT = BUILDER
-                .comment("Web server port (default: 8080)")
-                .defineInRange("webPort", 8080, 1024, 65535);
+            if (!Files.exists(DanmuMod.CONFIG_PATH)) {
+                Files.createDirectories(DanmuMod.CONFIG_PATH);
+            }
 
-        ENABLE_DANMU = BUILDER
-                .comment("Enable danmu display")
-                .define("enableDanmu", true);
+            if (Files.exists(configFile)) {
+                try (FileReader reader = new FileReader(configFile.toFile())) {
+                    configData = GSON.fromJson(reader, ConfigData.class);
+                    DanmuMod.info("Config loaded from " + configFile);
+                }
+            } else {
+                saveConfig();
+            }
+        } catch (Exception e) {
+            DanmuMod.error("Failed to load config: " + e.getMessage());
+            saveConfig();
+        }
+    }
 
-        DISPLAY_TIME = BUILDER
-                .comment("Danmu display time in milliseconds (default: 10000)")
-                .defineInRange("displayTime", 10000, 1000, 30000);
+    public static void saveConfig() {
+        try {
+            Path configFile = DanmuMod.CONFIG_PATH.resolve("config.json");
 
-        DANMU_SPEED = BUILDER
-                .comment("Danmu movement speed (default: 1.0)")
-                .defineInRange("danmuSpeed", 1.0, 0.1, 5.0);
+            try (FileWriter writer = new FileWriter(configFile.toFile())) {
+                GSON.toJson(configData, writer);
+                DanmuMod.info("Config saved to " + configFile);
+            }
+        } catch (Exception e) {
+            DanmuMod.error("Failed to save config: " + e.getMessage());
+        }
+    }
 
-        MAX_DANMUS = BUILDER
-                .comment("Maximum number of danmus displayed at once (default: 20)")
-                .defineInRange("maxDanmus", 20, 1, 100);
+    public static ConfigData getConfig() {
+        return configData;
+    }
 
-        BUILDER.pop();
-        SPEC = BUILDER.build();
+    public static void setConfig(ConfigData newConfig) {
+        configData = newConfig;
+        saveConfig();
     }
 }

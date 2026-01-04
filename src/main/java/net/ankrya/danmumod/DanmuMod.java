@@ -1,50 +1,75 @@
 package net.ankrya.danmumod;
 
-import com.mojang.logging.LogUtils;
 import net.ankrya.danmumod.config.ModConfig;
-import net.ankrya.danmumod.network.DanmuMessage;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig.Type;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.handling.DirectionalPayloadHandler;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.ankrya.danmumod.network.Networking;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.function.Supplier;
+import java.nio.file.Path;
 
-@Mod(DanmuMod.MODID)
-public class DanmuMod {
-    public static final String MODID = "danmu";
-    public static final Logger LOGGER = LogUtils.getLogger();
+public class DanmuMod implements ModInitializer, ClientModInitializer {
+    public static final String MOD_ID = "danmu";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static Path CONFIG_PATH;
 
-    public DanmuMod(IEventBus modEventBus, ModContainer modContainer) {
-        modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(this::clientSetup);
-        modEventBus.addListener(this::registerPayloads);
+    @Override
+    public void onInitialize() {
+        LOGGER.info("Danmu Mod (Server) Initializing");
+        CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
 
-        modContainer.registerConfig(Type.CLIENT, ModConfig.SPEC);
+        // 初始化网络
+        Networking.initialize();
+        Networking.registerServerReceiver();
+
+        // 注册服务器生命周期事件
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            LOGGER.info("Server started");
+        });
+
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            LOGGER.info("Server stopping");
+        });
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event) {
-        LOGGER.info("Danmu Mod Common Setup");
+    @Override
+    public void onInitializeClient() {
+        LOGGER.info("Danmu Mod (Client) Initializing");
+
+        // 加载配置
+        ModConfig.loadConfig();
+
+        // 注册客户端网络接收器
+        Networking.registerClientReceiver();
+
+        // 注册HUD渲染
+        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
+            net.ankrya.danmumod.client.DanmuRenderer.getInstance().render(drawContext, tickDelta.getTickDelta(true));
+        });
+
+        // 注册客户端tick事件
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            net.ankrya.danmumod.data.DanmuManager.getInstance().update();
+        });
+
+        // 初始化客户端事件处理器
+        net.ankrya.danmumod.client.ClientEventHandler.initialize();
     }
 
-    private void clientSetup(final FMLClientSetupEvent event) {
-        LOGGER.info("Danmu Mod Client Setup");
+    public static void info(String message) {
+        LOGGER.info("[DanmuMod] " + message);
     }
 
-    private void registerPayloads(final RegisterPayloadHandlersEvent event) {
-        final PayloadRegistrar registrar = event.registrar(MODID)
-                .versioned("1.0.0")
-                .optional();
-        registrar.playBidirectional(DanmuMessage.TYPE, DanmuMessage.STREAM_CODEC, new DirectionalPayloadHandler<>(DanmuMessage::handleClient, DanmuMessage::handleServer));
+    public static void error(String message, Throwable throwable) {
+        LOGGER.error("[DanmuMod] " + message, throwable);
     }
 
-    public static Supplier<net.minecraft.resources.ResourceLocation> res(String path) {
-        return () -> net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, path);
+    public static void error(String message) {
+        LOGGER.error("[DanmuMod] " + message);
     }
 }

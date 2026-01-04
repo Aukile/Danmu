@@ -1,13 +1,12 @@
 package net.ankrya.danmumod.server;
 
+import net.ankrya.danmumod.DanmuMod;
+import net.ankrya.danmumod.data.DanmuManager;
+import net.ankrya.danmumod.network.Networking;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.sun.net.httpserver.HttpServer;
-import net.ankrya.danmumod.DanmuMod;
-import net.ankrya.danmumod.data.DanmuManager;
-import net.ankrya.danmumod.network.DanmuMessage;
-import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.client.MinecraftClient;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,7 +31,7 @@ public class DanmuWebServer {
                 try {
                     handleDanmuRequest(exchange);
                 } catch (Exception e) {
-                    DanmuMod.LOGGER.error("Error handling request", e);
+                    DanmuMod.error("Error handling request", e);
                 }
             });
 
@@ -45,11 +44,30 @@ public class DanmuWebServer {
                 }
             });
 
+            // 添加状态检查端点
+            server.createContext("/status", exchange -> {
+                if ("GET".equals(exchange.getRequestMethod())) {
+                    JsonObject response = new JsonObject();
+                    response.addProperty("status", "ok");
+                    response.addProperty("server", "Danmu Web Server");
+                    response.addProperty("port", port);
+
+                    String responseStr = gson.toJson(response);
+                    exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+                    exchange.sendResponseHeaders(200, responseStr.getBytes(StandardCharsets.UTF_8).length);
+                    try (OutputStream os = exchange.getResponseBody()) {
+                        os.write(responseStr.getBytes(StandardCharsets.UTF_8));
+                    }
+                } else {
+                    exchange.sendResponseHeaders(405, -1);
+                }
+            });
+
             server.setExecutor(Executors.newCachedThreadPool());
             server.start();
-            DanmuMod.LOGGER.info("Danmu web server started on port {}", port);
+            DanmuMod.info("Danmu web server started on port " + port);
         } catch (IOException e) {
-            DanmuMod.LOGGER.error("Failed to start web server", e);
+            DanmuMod.error("Failed to start web server", e);
         }
     }
 
@@ -60,31 +78,34 @@ public class DanmuWebServer {
 
             if (json.has("message") && !json.get("message").getAsString().isEmpty()) {
                 String message = json.get("message").getAsString();
-                String sender = json.has("sender") ? json.get("sender").getAsString() : "Browser";
+                String sender = json.has("sender") ? json.get("sender").getAsString() : "浏览器";
                 String color = json.has("color") ? json.get("color").getAsString() : "#FFFFFF";
 
-                // 创建弹幕消息
-                DanmuMessage danmuMessage = new DanmuMessage(sender, message, color);
+                MinecraftClient client = MinecraftClient.getInstance();
 
-                // 检查当前是否在服务器上（多人游戏）
-                Minecraft mc = Minecraft.getInstance();
-                if (mc.isLocalServer()) {
-                    // 单人游戏或本地服务器：直接添加到管理器
-                    danmuManager.addDanmu(sender, message, color);
-                    DanmuMod.LOGGER.info("Added danmu locally: {} - {}", sender, message);
-                } else if (mc.getConnection() != null) {
-                    // 多人游戏：通过网络发送
-                    try {
-                        PacketDistributor.sendToServer(danmuMessage);
-                        DanmuMod.LOGGER.info("Sent danmu to server: {} - {}", sender, message);
-                    } catch (Exception e) {
-                        DanmuMod.LOGGER.error("Failed to send danmu to server", e);
+                if (client.world != null) {
+                    if (client.world.isClient()) {
+                        // 客户端：发送到服务器
+                        try {
+                            Networking.sendDanmuToServer(sender, message, color);
+                            DanmuMod.info("Sent danmu to server: " + sender + " - " + message);
+                        } catch (Exception e) {
+                            DanmuMod.error("Failed to send danmu to server", e);
+                            // 失败时本地添加
+                            danmuManager.addDanmu(sender, message, color);
+                        }
+                    } else {
+                        // 服务器端：直接添加到管理器
+                        danmuManager.addDanmu(sender, message, color);
                     }
+                } else {
+                    // 未进入游戏世界：本地添加
+                    danmuManager.addDanmu(sender, message, color);
                 }
 
                 JsonObject response = new JsonObject();
                 response.addProperty("status", "success");
-                response.addProperty("message", "Danmu received");
+                response.addProperty("message", "Danmu sent successfully");
 
                 String responseStr = gson.toJson(response);
                 exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
@@ -93,7 +114,16 @@ public class DanmuWebServer {
                     os.write(responseStr.getBytes(StandardCharsets.UTF_8));
                 }
             } else {
-                exchange.sendResponseHeaders(400, -1);
+                JsonObject response = new JsonObject();
+                response.addProperty("status", "error");
+                response.addProperty("message", "Message cannot be empty");
+
+                String responseStr = gson.toJson(response);
+                exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+                exchange.sendResponseHeaders(400, responseStr.getBytes(StandardCharsets.UTF_8).length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(responseStr.getBytes(StandardCharsets.UTF_8));
+                }
             }
         } else {
             exchange.sendResponseHeaders(405, -1);
@@ -903,12 +933,9 @@ public class DanmuWebServer {
     public void stop() {
         if (server != null) {
             server.stop(0);
-            DanmuMod.LOGGER.info("Danmu web server stopped");
+            server = null;
+            DanmuMod.info("Danmu web server stopped");
         }
-    }
-
-    public void setPort(int port) {
-        this.port = port;
     }
 
     public int getPort() {

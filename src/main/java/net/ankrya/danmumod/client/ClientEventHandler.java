@@ -3,72 +3,104 @@ package net.ankrya.danmumod.client;
 import net.ankrya.danmumod.DanmuMod;
 import net.ankrya.danmumod.data.DanmuManager;
 import net.ankrya.danmumod.server.DanmuWebServer;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.InputUtil;
+import org.lwjgl.glfw.GLFW;
 
-@EventBusSubscriber(modid = DanmuMod.MODID, value = Dist.CLIENT)
 public class ClientEventHandler {
     private static DanmuWebServer webServer;
     private static boolean serverStarted = false;
-    private static String lastServerAddress = "";
+    private static KeyBinding openBrowserKey;
 
-    @SubscribeEvent
-    public static void onClientTick(ClientTickEvent.Pre event) {
-        // 更新弹幕管理器
-        DanmuManager.getInstance().update();
+    public static void initialize() {
+        DanmuMod.info("Initializing client event handlers");
 
-        // 启动Web服务器（只在客户端启动）
-        if (!serverStarted) {
+        // 注册客户端停止事件
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            stopWebServer();
+        });
+
+        // 注册客户端启动事件
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             startWebServer();
-            serverStarted = true;
-        }
+        });
+
+        // 注册按键绑定
+        registerKeyBindings();
+
+        // 注册tick事件来检测按键
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            handleKeyPress();
+        });
     }
 
-    @SubscribeEvent
-    public static void onRenderGui(RenderGuiEvent.Post event) {
-        net.ankrya.danmumod.client.DanmuRenderer.getInstance().render(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaTicks());
+    private static void registerKeyBindings() {
+        openBrowserKey = new KeyBinding(
+                "key.danmumod.openbrowser",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_B,
+                "category.danmumod.general"
+        );
+
+        KeyBindingHelper.registerKeyBinding(openBrowserKey);
+    }
+
+    private static void handleKeyPress() {
+        if (openBrowserKey.wasPressed()) {
+            openBrowser();
+        }
     }
 
     private static void startWebServer() {
-        try {
-            webServer = new DanmuWebServer(DanmuManager.getInstance());
-            webServer.start();
-            DanmuMod.LOGGER.info("Danmu web server started at http://localhost:{}", webServer.getPort());
-            DanmuMod.LOGGER.info("Open this URL in browser to send danmu");
-        } catch (Exception e) {
-            DanmuMod.LOGGER.error("Failed to start web server", e);
+        if (!serverStarted) {
+            try {
+                webServer = new DanmuWebServer(DanmuManager.getInstance());
+                webServer.start();
+                serverStarted = true;
+
+                DanmuMod.info("Web server started on port " + webServer.getPort());
+
+                // 自动打开浏览器
+//                openBrowser();
+            } catch (Exception e) {
+                DanmuMod.error("Failed to start web server: " + e.getMessage(), e);
+            }
         }
     }
 
-    public static void stopWebServer() {
+    private static void stopWebServer() {
         if (webServer != null) {
-            webServer.stop();
-            serverStarted = false;
+            try {
+                webServer.stop();
+                serverStarted = false;
+                DanmuMod.info("Web server stopped");
+            } catch (Exception e) {
+                DanmuMod.error("Error stopping web server", e);
+            }
         }
     }
 
-    public static void reopenBrowser() {
+    private static void openBrowser() {
         if (webServer != null) {
             try {
                 int port = webServer.getPort();
                 String url = "http://localhost:" + port;
 
-                // 使用系统默认浏览器打开URL
                 java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
                 if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
                     desktop.browse(new java.net.URI(url));
-                    DanmuMod.LOGGER.info("Opened browser: {}", url);
+                    DanmuMod.info("Opened browser: " + url);
                 } else {
-                    DanmuMod.LOGGER.warn("Cannot open browser automatically. Please open manually: {}", url);
+                    DanmuMod.info("Please open browser manually: " + url);
                 }
             } catch (Exception e) {
-                DanmuMod.LOGGER.error("Failed to open browser", e);
+                DanmuMod.error("Failed to open browser", e);
             }
         } else {
-            DanmuMod.LOGGER.error("Web server not started yet");
+            DanmuMod.error("Web server not started yet");
         }
     }
 }

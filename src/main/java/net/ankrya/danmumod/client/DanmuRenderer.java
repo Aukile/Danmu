@@ -1,18 +1,17 @@
 package net.ankrya.danmumod.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import net.ankrya.danmumod.data.DanmuData;
 import net.ankrya.danmumod.data.DanmuManager;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.text.Text;
 
 import java.util.Iterator;
 
 public class DanmuRenderer {
     private static final DanmuRenderer INSTANCE = new DanmuRenderer();
-    private final Minecraft mc = Minecraft.getInstance();
+    private final MinecraftClient mc = MinecraftClient.getInstance();
 
     private DanmuRenderer() {}
 
@@ -20,16 +19,18 @@ public class DanmuRenderer {
         return INSTANCE;
     }
 
-    public void render(GuiGraphics guiGraphics, float partialTicks) {
-        if (mc.options.hideGui) return;
+    public void render(DrawContext context, float tickDelta) {
+        if (mc.options.hudHidden) {
+            return;
+        }
 
         DanmuManager manager = DanmuManager.getInstance();
-        Font font = mc.font;
+        TextRenderer font = mc.textRenderer;
 
-        int screenWidth = mc.getWindow().getGuiScaledWidth();
-        int screenHeight = mc.getWindow().getGuiScaledHeight();
+        int screenWidth = mc.getWindow().getScaledWidth();
+        int screenHeight = mc.getWindow().getScaledHeight();
 
-        float y = screenHeight * 0.1f; // Start from 10% from top
+        float y = screenHeight * 0.1f;
         int index = 0;
 
         Iterator<DanmuData> iterator = manager.getActiveDanmus().iterator();
@@ -41,32 +42,35 @@ public class DanmuRenderer {
                 danmu.y = y;
             }
 
-            danmu.x -= 1.0f * danmu.speed;
+            // 设置速度
+            danmu.speed = (float) net.ankrya.danmumod.config.ModConfig.getConfig().danmuSpeed;
+            danmu.x -= 0.8f * danmu.speed;
 
             String displayText = "<" + danmu.sender + "> " + danmu.message;
-            int textWidth = font.width(displayText);
+            int textWidth = font.getWidth(displayText);
 
             if (danmu.x + textWidth < 0) {
                 iterator.remove();
                 continue;
             }
 
-            PoseStack poseStack = guiGraphics.pose();
-            poseStack.pushPose();
-            poseStack.translate(danmu.x, danmu.y, 0);
+            // 绘制文本阴影
+            context.drawText(font, Text.literal(displayText), (int)danmu.x + 1, (int)danmu.y + 1, 0x000000, false);
 
-            // Draw shadow
-            guiGraphics.drawString(font, Component.literal(displayText), 1, 1, 0x000000, false);
-            // Draw text
-            guiGraphics.drawString(font, Component.literal(displayText), 0, 0, danmu.getColor(), false);
+            // 绘制文本
+            try {
+                int color = Integer.parseInt(danmu.color.replace("#", ""), 16);
+                context.drawText(font, Text.literal(displayText), (int)danmu.x, (int)danmu.y, color, false);
+            } catch (NumberFormatException e) {
+                // 默认白色
+                context.drawText(font, Text.literal(displayText), (int)danmu.x, (int)danmu.y, 0xFFFFFF, false);
+            }
 
-            poseStack.popPose();
-
-            y += font.lineHeight + 2;
+            y += font.fontHeight + 2;
             index++;
 
             if (y > screenHeight * 0.8f) {
-                break; // Don't render too many danmus
+                break;
             }
         }
     }

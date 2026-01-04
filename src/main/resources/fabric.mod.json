@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "danmu",
+  "version": "${version}",
+  "name": "Danmu Mod",
+  "description": "A mod that displays danmu messages from browser input",
+  "authors": ["Ankrya"],
+  "contact": {
+    "homepage": "https://example.com/",
+    "sources": "https://github.com/yourname/danmumod"
+  },
+  "license": "MIT",
+  "icon": "assets/danmu/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "net.ankrya.danmumod.DanmuMod"
+    ],
+    "client": [
+      "net.ankrya.danmumod.DanmuMod"
+    ]
+  },
+  "mixins": [
+    "danmu.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "cloth-config": "*"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "key.danmumod.openbrowser": "打开弹幕浏览器",
+  "category.danmumod.general": "弹幕模组",
+  "text.danmumod.webui": "弹幕网页界面",
+
+  "config.danmumod.title": "弹幕模组设置",
+  "config.danmumod.category.general": "常规设置",
+  "config.danmumod.category.visual": "视觉设置",
+
+  "config.danmumod.port": "Web服务器端口",
+  "config.danmumod.port.tooltip": "Web服务器监听的端口（默认：8080）",
+
+  "config.danmumod.enabled": "启用弹幕",
+  "config.danmumod.enabled.tooltip": "启用/禁用弹幕显示",
+
+  "config.danmumod.displayTime": "显示时间",
+  "config.danmumod.displayTime.tooltip": "弹幕在屏幕上停留的时间（毫秒）",
+
+  "config.danmumod.maxDanmus": "最大弹幕数",
+  "config.danmumod.maxDanmus.tooltip": "同时显示的最大弹幕数量",
+
+  "config.danmumod.speed": "弹幕速度",
+  "config.danmumod.speed.tooltip": "弹幕移动速度",
+
+  "config.danmumod.showSender": "显示发送者",
+  "config.danmumod.showSender.tooltip": "在消息前显示发送者名称"
+}
