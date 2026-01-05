@@ -6,14 +6,18 @@ import net.ankrya.danmumod.server.DanmuWebServer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class ClientEventHandler {
     private static DanmuWebServer webServer;
     private static boolean serverStarted = false;
-    private static KeyBinding openBrowserKey;
+    private static Map<String, KeyBinding> keyBindings = new HashMap<>();
 
     public static void initialize() {
         DanmuMod.info("Initializing client event handlers");
@@ -38,19 +42,79 @@ public class ClientEventHandler {
     }
 
     private static void registerKeyBindings() {
-        openBrowserKey = new KeyBinding(
+        // 打开浏览器
+        keyBindings.put("openBrowser", new KeyBinding(
                 "key.danmumod.openbrowser",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_B,
                 "category.danmumod.general"
-        );
+        ));
 
-        KeyBindingHelper.registerKeyBinding(openBrowserKey);
+        // 显示网络信息
+        keyBindings.put("networkInfo", new KeyBinding(
+                "key.danmumod.networkinfo",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_N,
+                "category.danmumod.general"
+        ));
+
+        // 显示历史消息统计
+        keyBindings.put("historyStats", new KeyBinding(
+                "key.danmumod.historystats",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_H,
+                "category.danmumod.general"
+        ));
+
+        // 注册所有按键绑定
+        keyBindings.values().forEach(KeyBindingHelper::registerKeyBinding);
     }
 
     private static void handleKeyPress() {
-        if (openBrowserKey.wasPressed()) {
+        MinecraftClient client = MinecraftClient.getInstance();
+
+        if (keyBindings.get("openBrowser").wasPressed()) {
             openBrowser();
+        }
+
+        if (keyBindings.get("networkInfo").wasPressed() && client.player != null) {
+            showNetworkInfo();
+        }
+
+        if (keyBindings.get("historyStats").wasPressed() && client.player != null) {
+            showHistoryStats();
+        }
+    }
+
+    private static void showNetworkInfo() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null && webServer != null) {
+            String message = String.format(
+                    "§a[弹幕模组] §f网络信息:\n" +
+                            "§7• 本地IP: §b%s\n" +
+                            "§7• 访问地址: §bhttp://%s:%d\n" +
+                            "§7• 二维码: §bhttp://%s:%d/network",
+                    webServer.getLocalIp(),
+                    webServer.getLocalIp(),
+                    webServer.getPort(),
+                    webServer.getLocalIp(),
+                    webServer.getPort()
+            );
+            client.player.sendMessage(net.minecraft.text.Text.literal(message), false);
+        }
+    }
+
+    private static void showHistoryStats() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null) {
+            String message = String.format(
+                    "§a[弹幕模组] §f历史消息功能已启用!\n" +
+                            "§7• 发送的消息会自动保存\n" +
+                            "§7• 在网页中按 Ctrl+S 保存草稿\n" +
+                            "§7• 支持搜索、过滤、收藏功能\n" +
+                            "§7• 数据保存在浏览器本地存储"
+            );
+            client.player.sendMessage(net.minecraft.text.Text.literal(message), false);
         }
     }
 
@@ -61,13 +125,23 @@ public class ClientEventHandler {
                 webServer.start();
                 serverStarted = true;
 
-                DanmuMod.info("Web server started on port " + webServer.getPort());
-
-                // 自动打开浏览器
-//                openBrowser();
+                showStartupMessage();
             } catch (Exception e) {
                 DanmuMod.error("Failed to start web server: " + e.getMessage(), e);
             }
+        }
+    }
+
+    private static void showStartupMessage() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player != null && webServer != null) {
+            String message = String.format(
+                    "§a[弹幕模组] §fWeb服务器已启动!\n" +
+                            "§7• 手机访问: §bhttp://%s:%d\n" +
+                            "§7• 历史消息: §e自动保存发送记录\n" +
+                            "§7• 快捷键: §eB§7(打开) §eN§7(网络) §eH§7(历史)"
+            );
+            client.player.sendMessage(net.minecraft.text.Text.literal(message), false);
         }
     }
 
@@ -86,13 +160,19 @@ public class ClientEventHandler {
     private static void openBrowser() {
         if (webServer != null) {
             try {
-                int port = webServer.getPort();
-                String url = "http://localhost:" + port;
-
+                String url = "http://localhost:" + webServer.getPort();
                 java.awt.Desktop desktop = java.awt.Desktop.getDesktop();
                 if (desktop.isSupported(java.awt.Desktop.Action.BROWSE)) {
                     desktop.browse(new java.net.URI(url));
                     DanmuMod.info("Opened browser: " + url);
+
+                    MinecraftClient client = MinecraftClient.getInstance();
+                    if (client.player != null) {
+                        client.player.sendMessage(
+                                net.minecraft.text.Text.literal("§a[弹幕模组] §f已在浏览器中打开弹幕页面"),
+                                false
+                        );
+                    }
                 } else {
                     DanmuMod.info("Please open browser manually: " + url);
                 }

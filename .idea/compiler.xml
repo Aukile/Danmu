@@ -3,4 +3,10 @@
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="21" />
   </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-AoutRefMapFile=E:\mcc\Danmu\build\classes\java\main\danmumod-fabric-refmap.json -AdefaultObfuscationEnv=named:intermediary -Aquiet=true -AoutMapFileNamedIntermediary=E:\mcc\Danmu\build\loom-cache\mixin-map-net.fabricmc.yarn.1_21_1.1.21.1+build.3-v2.main.tiny -AinMapFileNamedIntermediary=E:\mcc\gradle\.gradle\caches\fabric-loom\1.21.1\net.fabricmc.yarn.1_21_1.1.21.1+build.3-v2\mappings.tiny" />
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="Danmu.test" options="-AoutRefMapFile=E:\mcc\Danmu\build\classes\java\test\test-danmumod-fabric-refmap.json -AdefaultObfuscationEnv=named:intermediary -Aquiet=true -AoutMapFileNamedIntermediary=E:\mcc\Danmu\build\loom-cache\mixin-map-net.fabricmc.yarn.1_21_1.1.21.1+build.3-v2.test.tiny -AinMapFileNamedIntermediary=E:\mcc\gradle\.gradle\caches\fabric-loom\1.21.1\net.fabricmc.yarn.1_21_1.1.21.1+build.3-v2\mappings.tiny" />
+    </option>
+  </component>
 </project>
